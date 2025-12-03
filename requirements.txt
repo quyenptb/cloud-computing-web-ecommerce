@@ -45,7 +45,7 @@ executing==2.2.0
 Faker==37.1.0
 fastapi==0.121.2
 fastparquet==2024.11.0
-filelock==3.20.0
+filelock==3.19.0
 Flask==3.1.0
 fonttools==4.55.2
 frozenlist==1.8.0

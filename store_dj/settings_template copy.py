@@ -116,11 +116,11 @@ DATABASES = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.oracle',
-        'NAME': 'ORCL', 
-        'USER': 'admin',                    
-        'PASSWORD': 'x0zQ8flX2)!A_<b?B#fx1!u$aTF7', 
-        'HOST': 'database-1.cyremys6azm4.us-east-1.rds.amazonaws.com', 
-        'PORT': '1521',                     
+        'NAME': 'yourservicename', 
+        'USER': 'yourusername',                    
+        'PASSWORD': 'yourpassword', 
+        'HOST': 'yourhost', 
+        'PORT': 'yourport',                     
     }
 }
 

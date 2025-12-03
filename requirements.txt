@@ -100,7 +100,7 @@ pycparser==2.22
 pycryptodome==3.23.0
 pydantic==2.12.4
 pydantic_core==2.41.5
-pyg-lib==0.4.0+pt24cpu
+pyg-lib
 pygame==2.5.0
 Pygments==2.18.0
 pymultihash==0.8.2

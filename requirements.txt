@@ -1,158 +1,32 @@
-aiohappyeyeballs==2.6.1
-aiohttp==3.13.0
-aiosignal==1.4.0
-annotated-doc==0.0.4
-annotated-types==0.7.0
-anyio==4.11.0
-asgiref==3.8.1
-asttokens==3.0.0
-attrs==25.4.0
-base58==1.0.3
-bcrypt==3.2.2
-bitarray==3.7.1
-blinker==1.9.0
-certifi==2025.1.31
-cffi==1.16.0
-charset-normalizer==3.4.1
-ckzg==2.1.5
-click==8.1.7
-colorama==0.4.6
-colour==0.1.5
-comm==0.2.3
-cramjam==2.11.0
-cryptography==42.0.7
-cx_Oracle==8.3.0
-cymem==2.0.10
-debugpy==1.8.14
-decorator==5.2.1
+# --- Core Framework ---
 Django==4.2.16
-django-controlcenter==0.3.2
 django-cors-headers==3.7.0
-django-pkgconf==0.4.0
-djangorestframework==3.15.2
-dtreeviz==2.2.2
-ecdsa==0.19.1
-et_xmlfile==2.0.0
-eth-account==0.13.7
-eth-hash==0.7.1
-eth-keyfile==0.8.1
-eth-keys==0.7.0
-eth-rlp==2.2.0
-eth-typing==5.2.1
-eth-utils==5.3.1
-eth_abi==5.2.0
-executing==2.2.0
-Faker==37.1.0
-fastapi==0.121.2
-fastparquet==2024.11.0
-filelock==3.19.1  # Sửa từ 3.20.0
-Flask==3.1.0
-fonttools==4.55.2
-frozenlist==1.8.0
-fsspec==2025.10.0
-git-filter-repo==2.47.0
-graphviz==0.20.3
-greenlet==3.2.4
-h11==0.16.0
-hexbytes==1.3.1
-idna==3.10
-iniconfig==2.0.0
-ipykernel==6.31.0  # Sửa từ 7.1.0
-ipython==8.18.1  # Sửa từ 9.7.0
-ipython_pygments_lexers==1.1.1
-itsdangerous==2.2.0
-jedi==0.19.2
-Jinja2==3.1.6
-jupyter_client==8.6.3
-jupyter_core==5.7.2
-kafka-python==2.2.6
-kiwisolver==1.4.7
-lazyasd==0.1.4
-lru-dict==1.3.0
-MarkupSafe==3.0.2
-mdurl==0.1.2
-morphys==1.0
-msgspec==0.19.0
-multidict==6.7.0
-nest-asyncio==1.6.0
-numpy==1.26.4  # Sửa từ 2.3.5
-openpyxl==3.1.5
+django-controlcenter==0.3.2
+
+# --- Database (Oracle) ---
+cx_Oracle==8.3.0
 oracledb==2.2.0
-ordereddict==1.1
-packaging==23.2
-pandas==2.3.3
-parsimonious==0.10.0
-parso==0.8.4
-passlib==1.7.4
+
+# --- Report & Excel ---
+# Dùng trong admin_volt/models.py và utils.py để xuất báo cáo [cite: 68]
+openpyxl==3.1.5
+
+# --- Kafka Integration ---
+# Dùng trong store/models.py (SalesProducer) [cite: 119]
+kafka-python==2.2.6
+
+# --- Utilities ---
+# Dùng cho models.ImageField trong store/models.py [cite: 104]
 pillow==10.3.0
-platformdirs==4.3.7
-pluggy==1.5.0
-prompt_toolkit==3.0.51
-propcache==0.4.0
-psutil==7.0.0
-psycopg2-binary # Đã đổi sang bản binary
-pure_eval==0.2.3
-py-multibase==1.0.3
-py-multicodec==0.2.1
-pyarrow==21.0.0  # Sửa từ 22.0.0
-pyasn1==0.6.1
-pycparser==2.22
-pycryptodome==3.23.0
-pydantic==2.12.4
-pydantic_core==2.41.5
-pyg-lib # Sẽ cài thủ công sau, giữ lại dòng này để theo dõi
-pygame==2.5.0
-Pygments==2.18.0
-pymultihash==0.8.2
-pyparsing==3.2.0
-PySide6==6.10.0
-PySide6_Addons==6.10.0
-PySide6_Essentials==6.10.0
-pytest==8.3.4
-python-baseconv==1.2.2
-python-dateutil==2.9.0.post0
+# Quản lý biến môi trường (Good practice)
 python-dotenv==1.1.1
-python-jose==3.5.0
-python-multipart==0.0.20
-pytz==2024.1
-pyunormalize==17.0.0
-#pywin32==310
-PyYAML==6.0.3
-pyzmq==26.4.0
-regex==2024.11.6
-requests==2.32.3
-rlp==4.1.0
-rsa==4.9.1
-safe-pysha3==1.0.5
-semantic-version==2.10.0
-shellingham==1.5.4
-shiboken6==6.10.0
-six==1.16.0
-sniffio==1.3.1
-sortedcontainers==2.4.0
-SQLAlchemy==2.0.44
-sqlparse==0.4.4
-stack-data==0.6.3
-starlette==0.49.3
-tenacity==9.0.0
-threadpoolctl==3.5.0
-# THÊM DÒNG TORCH CPU-ONLY VÀO ĐÂY
-#download.pytorch.org
-tornado==6.4.2
-tqdm==4.67.1
-traitlets==5.14.3
-types-requests==2.32.4.20250913
-typing-inspection==0.4.2
-typing_extensions==4.15.0
-tzdata==2024.1
-urllib3==2.5.0
+# Dùng để chạy server ASGI (do có file asgi.py) [cite: 217]
 uvicorn==0.38.0
-varint==1.0.2
-watchdog==3.0.0
-wcwidth==0.2.13
-web3==7.13.0
-websockets==15.0.1
-Werkzeug==3.1.3
-wrapt==1.17.0
-xxhash==3.6.0
-yarl==1.22.0
+gunicorn==21.2.0
+whitenoise==6.6.0
+
+six==1.16.0
+
+
+# --- Testing ---
+pytest==8.3.4

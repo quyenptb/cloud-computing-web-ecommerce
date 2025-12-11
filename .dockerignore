@@ -1,0 +1,66 @@
+# --- Git & Version Control (Rất nặng, cần bỏ ngay) ---
+.git
+.gitignore
+.gitattributes
+.github
+.gitlab-ci.yml
+
+# --- Python Environment & Cache (Thủ phạm gây nặng số 1) ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Docker specific (Không copy Dockerfile vào trong Image) ---
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# --- Environment Variables (Bảo mật - Không đưa file .env thật lên image) ---
+.env
+.env.local
+.env.*
+!.env.example
+
+# --- IDE & Editor Settings (Rác của VSCode/PyCharm) ---
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# --- Static & Media Files (Chỉ copy nếu cần serve trực tiếp, thường nên bỏ qua media lớn) ---
+# Nếu thư mục static/media chứa ảnh test nặng, hãy ignore nó
+# staticfiles/  <-- Thư mục do collectstatic tạo ra, nên ignore
+# media/        <-- Ảnh upload của user/test, không nên đóng gói vào code
+
+# --- Documentation & Logs ---
+docs/
+*.md
+*.log
+logs/
+*.pot
+*.mo
+
+# --- Tests & Coverage ---
+.coverage
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.pytest_cache/
+tests/
+
+# --- Files tạm/Rác hệ thống ---
+tmp/
+temp/
+
+venv/
+venv310/

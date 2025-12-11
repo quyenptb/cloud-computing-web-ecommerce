@@ -1,7 +1,7 @@
 from ast import Try
 from email.mime import image
 from pickle import TRUE
-from tkinter import CASCADE
+from django.db.models import CASCADE 
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AbstractUser
@@ -9,6 +9,7 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.db import connection, transaction
 import cx_Oracle
+import os
 # adding new imports
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
@@ -236,7 +237,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class SalesProducer:
-    def __init__(self, bootstrap_servers='localhost:9092'):
+    def __init__(self, bootstrap_servers=None):
+        if bootstrap_servers is None:
+            bootstrap_servers = os.environ.get('KAFKA_BOOTSTRAP_SERVERS', 'kafka:29092')
         try:
             self.producer = KafkaProducer(
                 bootstrap_servers=bootstrap_servers,

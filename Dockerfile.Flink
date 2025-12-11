@@ -1,0 +1,20 @@
+# Dùng image Flink gốc làm base
+FROM flink:1.17-java11
+
+# Chuyển sang root user để có quyền cài đặt
+USER root
+
+# Cài đặt Python 3, pip và các gói cơ bản cần thiết (dành cho Debian/Ubuntu base image)
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip python3-venv && \
+    rm -rf /var/lib/apt/lists/*
+
+# Tạo alias cho python (để flink run -py có thể tìm thấy lệnh python)
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+
+# Cài đặt các thư viện Python cho Flink Job của bạn (ví dụ)
+# Nếu flink_job.py của bạn cần kafka-python hay psycopg2-binary
+# RUN pip install kafka-python psycopg2-binary
+
+# Trở lại user mặc định của Flink
+USER flink

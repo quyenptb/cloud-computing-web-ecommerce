@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retail-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: retail-backend
+  template:
+    metadata:
+      labels:
+        app: retail-backend
+    spec:
+      # --- THÊM ĐOẠN NÀY ---
+      hostAliases:
+      - ip: "192.168.137.1"  # IP thật mà cậu test nc -zv thành công
+        hostnames:
+        - "desktop-t3iq6f2"  # Tên máy tính của cậu (lấy từ terminal prompt)
+      # ---------------------
+
+      containers:
+      - name: retail-backend
+        image: quyenptb/retail-backend:v1.5
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DJANGO_DEBUG
+          value: "True"
+        - name: DJANGO_ALLOWED_HOSTS
+          value: "*"
+        
+        # --- KẾT NỐI ORACLE ---
+        - name: DB_ENGINE
+          value: "django.db.backends.oracle"
+        
+        # Để trống HOST và PORT để Django dùng trọn vẹn chuỗi DB_NAME
+        - name: DB_HOST
+          value: ""
+        - name: DB_PORT
+          value: ""
+        
+        # DÙNG CHUỖI NÀY (Thay 192.168.137.1 bằng IP thật của cậu)
+        # Lưu ý: SERVICE_NAME=orcl21pdb1 (Đúng tên service trong lsnrctl status)
+        - name: DB_NAME
+          value: "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.137.1)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=orcl21pdb1)))"
+          
+        - name: DB_USER
+          value: "bq1"
+        - name: DB_PASSWORD
+          value: "bq"
+        
+        # Kafka
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka:9092"

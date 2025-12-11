@@ -19,6 +19,8 @@ from django.db import transaction, connection
 from django.http import HttpResponse
 from admin_volt.utils import call_stored_procedure, generate_report, generate_report_with_chart  # Đảm bảo đúng đường dẫn
 import random
+import time
+import os
 
 
 # need to create forms and models
@@ -299,13 +301,15 @@ def processOrder(request):
                     print(f"Shipping address created for order {order.id}")
 
                 # ---------------------------------------------------------
-                # KAFKA INTEGRATION (PHẦN QUAN TRỌNG ĐÃ SỬA)
+                # KAFKA INTEGRATION
                 # ---------------------------------------------------------
                 if order.complete:
                     try:
                         # 1. Khởi tạo Producer
+                        kafka_server = os.environ.get('KAFKA_BOOTSTRAP_SERVERS', 'kafka:29092')
+                        
                         producer = KafkaProducer(
-                            bootstrap_servers=['localhost:9092'], # Đảm bảo port này đúng với docker-compose
+                            bootstrap_servers=[kafka_server], # Đảm bảo port này đúng với docker-compose
                             value_serializer=lambda x: json.dumps(x).encode('utf-8'),
                             request_timeout_ms=5000 # Timeout nhanh nếu lỗi để không treo Web
                         )

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: retail-service
+spec:
+  type: NodePort  # Dùng NodePort để test local dễ dàng
+  selector:
+    app: retail-backend
+  ports:
+    - port: 8000        # Port của Service
+      targetPort: 8000  # Port của Container
+      nodePort: 30000   # Port mở ra máy ngoài (truy cập qua localhost:30000)

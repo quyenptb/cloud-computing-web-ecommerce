@@ -32,8 +32,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'SECRETKEY'
 
 # SITE
-SERVER_SITE = 'NGROK_URL'
-SERVER_HOST = 'NGROK_HOST'
+SERVER_SITE = 'http://54.82.71.158'
+SERVER_HOST = '54.82.71.158'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -92,7 +92,6 @@ TEMPLATES = [
         },
     },
 ]
-
 WSGI_APPLICATION = 'store_dj.wsgi.application'
 
 
@@ -113,21 +112,21 @@ DATABASES = {
 }
 '''
 
+dsn_tns = cx_Oracle.makedsn(
+    'database-1.cyremys6azm4.us-east-1.rds.amazonaws.com',
+    '1521',
+    service_name='DATABASE' # Lưu ý: Check kỹ xem RDS của bạn là SID='ORCL' hay Service_Name='ORCL'
+)
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.oracle',
-        'NAME': 'yourservicename', 
-        'USER': 'yourusername',                    
-        'PASSWORD': 'yourpassword', 
-        'HOST': 'yourhost', 
-        'PORT': 'yourport',                     
+        'NAME': dsn_tns, # Gán chuỗi kết nối vào đây
+        'USER': 'admin',
+        'PASSWORD': 'nYY:h|~OORYH2?LTV|9eWov73W8m',
     }
 }
 
-
-
-# Password validation
-# https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -164,6 +163,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')

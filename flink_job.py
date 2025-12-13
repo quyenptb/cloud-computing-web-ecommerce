@@ -86,7 +86,8 @@ def main():
             'url' = 'jdbc:postgresql://postgres:5432/retail_analytics',
             'table-name' = 'product_sales',
             'username' = 'admin',
-            'password' = 'password'
+            'password' = 'password',
+            'sink.buffer-flush.max-rows' = '100'
         )
     """)
 
@@ -103,7 +104,8 @@ def main():
             'url' = 'jdbc:postgresql://postgres:5432/retail_analytics',
             'table-name' = 'total_sales',
             'username' = 'admin',
-            'password' = 'password'
+            'password' = 'password',
+            'sink.buffer-flush.max-rows' = '100'
         )
     """)
 
@@ -120,7 +122,8 @@ def main():
             'url' = 'jdbc:postgresql://postgres:5432/retail_analytics',
             'table-name' = 'store_sales',
             'username' = 'admin',
-            'password' = 'password'
+            'password' = 'password',
+            'sink.buffer-flush.max-rows' = '100'
         )
     """)
 

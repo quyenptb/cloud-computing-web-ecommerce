@@ -161,11 +161,11 @@ class OrderItem (models.Model):
         return 0
     
     def save(self, *args, **kwargs):
-        if self.product is not None:
-            if self.product.stock - self.quantity < 0:
-                raise ValidationError("quantity must lower than stock")
-            self.product.save()
-        super().save(*args, **kwargs)
+        #if self.product is not None:
+         #   if self.product.stock - self.quantity < 0:
+          #      raise ValidationError("quantity must lower than stock")
+           # self.product.save()
+        super(OrderItem, self).save(*args, **kwargs) #super().save(*args, **kwargs)
 
 
 

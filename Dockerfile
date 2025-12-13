@@ -11,6 +11,10 @@ ENV PYTHONUNBUFFERED=1
 ENV LD_LIBRARY_PATH=/opt/oracle/instantclient_21_13:$LD_LIBRARY_PATH
 ENV PATH=$PATH:/opt/oracle/instantclient_21_13
 
+
+ENV PYTHONPATH=$PYTHONPATH:. 
+
+
 # Working directory
 WORKDIR /app
 

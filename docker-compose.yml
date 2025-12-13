@@ -124,7 +124,7 @@ services:
 
   backend_django:
     build: .  # Build từ Dockerfile ở thư mục hiện tại
-    container_name: store_backend
+    container_name: store-backend
     command: sh entrypoint.sh # Chạy script khởi tạo
     ports:
       - "8000:8000" # Expose ra localhost:8000
@@ -137,19 +137,35 @@ services:
       - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend_django
 # --- CẤU HÌNH ORACLE (Sửa theo công thức vừa chạy thành công) ---
       - DB_ENGINE=django.db.backends.oracle
-      - DB_HOST=       # Để trống (để Django không tự ghép chuỗi sai)
-      - DB_PORT=       # Để trống
-      # Dùng chuỗi Easy Connect với IP thật của bạn (IP lúc nãy bạn chạy docker run thành công)
-      - DB_NAME=//192.168.137.1:1521/orcl21pdb1 
-      - DB_USER=bq1
-      - DB_PASSWORD=bq
+      - DB_HOST=database-1.cyremys6azm4.us-east-1.rds.amazonaws.com
+      - DB_PORT=1521
+      - DB_NAME=ORCL
+      - DB_USER=admin
+      - DB_PASSWORD=nYY:h|~OORYH2?LTV|9eWov73W8m
       # Cấu hình Kafka cho App
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-    extra_hosts:
+    #extra_hosts:
       # Cho phép container nhìn thấy máy host (Windows) qua tên host.docker.internal
-      - "host.docker.internal:host-gateway"
+      #- "host.docker.internal:host-gateway"
     networks:
       - retail-net
+
+  k6:
+    image: grafana/k6:latest
+    container_name: k6_tester
+    volumes:
+      - ./tests:/app/tests
+    networks:
+      - retail-net
+    command: >
+      run /app/tests/django_api_test.js 
+    depends_on:
+      - backend_django
+    # Tùy chọn: Chạy ở chế độ thủ công (command override)
+    entrypoint: ["sleep", "infinity"] 
+
+
+
 
 # Định nghĩa network riêng để các service nhìn thấy nhau bằng tên
 networks:

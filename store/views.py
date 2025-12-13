@@ -21,6 +21,11 @@ from admin_volt.utils import call_stored_procedure, generate_report, generate_re
 import random
 import time
 import os
+import string
+import random
+from django.db.models import F
+from django.views.decorators.csrf import csrf_exempt
+import logging
 
 
 # need to create forms and models
@@ -209,6 +214,7 @@ def checkout(request):
 # -> sau đó trả về một JSON với thông tin về sản phẩm đã được thêm hoặc xóa
 # Lưu thay đổi vào csdl
 
+@csrf_exempt
 @transaction.atomic
 def updateItem(request):
     data = json.loads(request.body)
@@ -225,10 +231,11 @@ def updateItem(request):
     orderItem, created = OrderItem.objects.get_or_create(
         order=order, product=product)
     if (action == 'add'):
-        orderItem.quantity = (orderItem.quantity + 1)
+        orderItem.quantity = F('quantity') + 1
     elif (action == 'remove'):
-        orderItem.quantity = (orderItem.quantity - 1)
+        orderItem.quantity = F('quantity') - 1
     orderItem.save()
+    orderItem.refresh_from_db()
 
     if orderItem.quantity <= 0:
         orderItem.delete()
@@ -249,127 +256,180 @@ def set_serializable_isolation_level():
     with connection.cursor() as cursor:
         cursor.execute('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE')
 
+
+
+# Hàm callback để log lỗi mà không chặn Django
+def on_send_error(ex):
+    print(f"ERROR: Kafka Async Send Failed: {ex}")
+
+
+_kafka_producer = None
+
+def get_singleton_producer():
+    """
+    Hàm này đảm bảo trong suốt vòng đời của 1 Process Django,
+    chỉ có ĐÚNG 1 con Producer được tạo ra.
+    """
+    global _kafka_producer
+    if _kafka_producer is None:
+        try:
+            print(f"🔄 [INIT] Đang khởi tạo Kafka Producer cho Process ID: {os.getpid()}...")
+            kafka_server = os.environ.get('KAFKA_BOOTSTRAP_SERVERS', 'kafka:29092')
+            
+            _kafka_producer = KafkaProducer(
+                bootstrap_servers=[kafka_server],
+                value_serializer=lambda x: json.dumps(x).encode('utf-8'),
+                # Cấu hình tối ưu cho Stress Test:
+                acks=1,              # Leader nhận là được (nhanh)
+                linger_ms=10,        # Gom tin 10ms gửi 1 lần
+                batch_size=16384,    # Kích thước gói tin
+                request_timeout_ms=5000,
+                connections_max_idle_ms=300000 # Giữ kết nối sống 5 phút
+            )
+            print(f" [SUCCESS] Kafka Producer đã sẵn sàng trên Process {os.getpid()}!")
+        except Exception as e:
+            print(f" [CRITICAL] Không thể kết nối Kafka: {e}")
+            return None
+    return _kafka_producer
+
 @transaction.atomic
+@csrf_exempt
 def processOrder(request):
     try:
-        set_serializable_isolation_level()
-        with transaction.atomic():
-            print('Received data:', request.body)
-            # Tạo transaction_id unique
-            transaction_timestamp = datetime.datetime.now().timestamp()
-            transaction_id_str = str(transaction_timestamp).replace('.', '') # Tạo chuỗi ID duy nhất
-            
-            data = json.loads(request.body)
+        print('Received data:', request.body)
+        
+        # 1. Parse dữ liệu
+        data = json.loads(request.body)
+        
+        # Tạo transaction_id unique
+        transaction_timestamp = datetime.datetime.now().timestamp()
+        transaction_id_str = str(transaction_timestamp).replace('.', '')
 
-            if request.user.is_authenticated:
-                customer = request.user
-                print(f"Processing order for authenticated user: {customer.username}")
+        # 2. Kiểm tra đăng nhập
+        if request.user.is_authenticated:
+            customer = request.user
+            print(f"Processing order for authenticated user: {customer.username}")
 
-                order, created = Order.objects.get_or_create(
-                    customer=customer, complete=False)
-                
-                if created:
-                    print(f"Created new order with ID: {order.id}")
-                else:
-                    print(f"Found existing order with ID: {order.id}")
+            order, created = Order.objects.get_or_create(
+                customer=customer, complete=False)
 
-                total = float(data['form']['total'])
-                order.transaction_id = transaction_id_str
-
-                # Kiểm tra tổng tiền (backend validation)
-                if total == float(order.get_cart_total):
-                    order.complete = True
-                    print(f"Order total matches cart total. Marking order {order.id} as complete.")
-                
-                order.save()
-                print(f"Order {order.id} saved with transaction ID: {transaction_id_str}")
-
-                # Gọi stored procedure Oracle để cập nhật kho
-                call_update_stock_before_order(order.id)
-
-                # Lưu địa chỉ giao hàng
-                if order.shipping:
-                    print(f"Creating shipping address for order {order.id}")
-                    ShippingAddress.objects.create(
-                        customer=customer,
-                        order=order,
-                        address=data['shipping']['address'],
-                        city=data['shipping']['city'],
-                        state=data['shipping']['state'],
-                        zipcode=data['shipping']['zipcode'],
-                    )
-                    print(f"Shipping address created for order {order.id}")
-
-                # ---------------------------------------------------------
-                # KAFKA INTEGRATION
-                # ---------------------------------------------------------
-                if order.complete:
-                    try:
-                        # 1. Khởi tạo Producer
-                        kafka_server = os.environ.get('KAFKA_BOOTSTRAP_SERVERS', 'kafka:29092')
-                        
-                        producer = KafkaProducer(
-                            bootstrap_servers=[kafka_server], # Đảm bảo port này đúng với docker-compose
-                            value_serializer=lambda x: json.dumps(x).encode('utf-8'),
-                            request_timeout_ms=5000 # Timeout nhanh nếu lỗi để không treo Web
-                        )
-
-                        # 2. Lấy chi tiết các món hàng trong giỏ
-                        items = order.orderitem_set.all()
-                        
-                        list_stores_hanoi = ['Store_DongDa', 'Store_CauGiay', 'Store_HaiBaTrung', 'Store_ThanhXuan']
-                        list_stores_hcm = ['Store_Quan1', 'Store_Quan3', 'Store_Quan5', 'Store_Quan10']
-                        list_stores_dn = ['Store_HaiChau', 'Store_ThanhKhe', 'Store_LienChieu', 'Store_NguHanhSon']
-                        
-                        
-                        city_input = data['shipping']['city'].lower()
-                        if 'ho chi minh' in city_input: fake_store_id = random.choice(list_stores_hcm)
-                        elif 'ha noi' in city_input: fake_store_id = random.choice(list_stores_hanoi)
-                        elif 'da nang' in city_input: fake_store_id = random.choice(list_stores_dn)
-                        else: fake_store_id = 'Store_Online'
-
-                        # 3. Lặp qua từng món và gửi format PHẲNG (Flat JSON) cho Flink
-                        print(f"Start sending {len(items)} items to Kafka...")
-                        
-                        for item in items:
-                            # Cấu trúc này PHẢI khớp 100% với câu lệnh CREATE TABLE trong flink_job.py
-                            kafka_payload = {
-                                "transaction_id": str(order.transaction_id),
-                                "product_id": str(item.product.id),
-                                "quantity": int(item.quantity),
-                                "price": float(item.product.price),
-                                "timestamp": int(time.time() * 1000), # Milliseconds (BIGINT)
-                                "customer_id": customer.id,
-                                "store_id": fake_store_id  
-                            }
-                            
-                            producer.send('sales_transactions', value=kafka_payload)
-                            print(f" > Sent item: Product {item.product.id} - Qty {item.quantity}")
-
-                        # 4. Đẩy dữ liệu đi ngay lập tức
-                        producer.flush()
-                        print("LOG: All Kafka messages sent successfully.")
-
-                    except Exception as k_error:
-                        # Log lỗi Kafka nhưng KHÔNG rollback đơn hàng (bán được hàng quan trọng hơn realtime report)
-                        print(f"WARNING: Kafka Error (Data not sent to Flink): {k_error}")
-                # ---------------------------------------------------------
-
+            if created:
+                print(f"Created new order with ID: {order.id}")
             else:
-                print('User is not logged in.')
-                return JsonResponse('User is not logged in.', status=401, safe=False)
+                print(f"Found existing order with ID: {order.id}")
 
-        print("Order processing completed successfully.")
-        return JsonResponse('Payment complete!', safe=False)
+            total = float(data['form']['total'])
+            order.transaction_id = transaction_id_str
+
+            # 3. Kiểm tra tổng tiền
+            if total == float(order.get_cart_total):
+                order.complete = True
+                print(f"Order total matches cart total. Marking order {order.id} as complete.")
+
+            order.save()
+            print(f"Order {order.id} saved with transaction ID: {transaction_id_str}")
+
+            # 4. Gọi Stored Procedure cập nhật kho
+            call_update_stock_before_order(order.id)
+
+            # 5. Lưu địa chỉ giao hàng
+            if order.shipping:
+                print(f"Creating shipping address for order {order.id}")
+                ShippingAddress.objects.create(
+                    customer=customer,
+                    order=order,
+                    address=data['shipping']['address'],
+                    city=data['shipping']['city'],
+                    state=data['shipping']['state'],
+                    zipcode=data['shipping']['zipcode'],
+                )
+                print(f"Shipping address created for order {order.id}")
+
+            # ---------------------------------------------------------
+            # 6. KAFKA INTEGRATION
+            # ---------------------------------------------------------
+            if order.complete:
+                try:
+                    # Khởi tạo Producer
+                    '''
+                    kafka_server = os.environ.get('KAFKA_BOOTSTRAP_SERVERS', 'kafka:29092')
+                    producer = KafkaProducer(
+                        bootstrap_servers=[kafka_server],
+                        value_serializer=lambda x: json.dumps(x).encode('utf-8'),
+                        request_timeout_ms=5000,
+                        acks=0,         # Gửi nhanh, không chờ xác nhận (Stress test mode)
+                        linger_ms=10,   # Gom tin nhắn
+                        batch_size=16384
+                    )'''
+
+                    producer = get_singleton_producer()
+                    items = order.orderitem_set.all()
+
+                    # Logic chọn Store giả lập
+                    list_stores_hanoi = ['Store_DongDa', 'Store_CauGiay', 'Store_HaiBaTrung', 'Store_ThanhXuan']
+                    list_stores_hcm = ['Store_Quan1', 'Store_Quan3', 'Store_Quan5', 'Store_Quan10']
+                    list_stores_dn = ['Store_HaiChau', 'Store_ThanhKhe', 'Store_LienChieu', 'Store_NguHanhSon']
+
+                    city_input = data['shipping']['city'].lower()
+                    if 'ho chi minh' in city_input: fake_store_id = random.choice(list_stores_hcm)
+                    elif 'ha noi' in city_input: fake_store_id = random.choice(list_stores_hanoi)
+                    elif 'da nang' in city_input: fake_store_id = random.choice(list_stores_dn)
+                    else: fake_store_id = 'Store_Online'
+
+                    print(f"Start sending {len(items)} items to Kafka...")
+
+                    # Tạo dữ liệu rác để tăng tải (Payload nặng 10KB)
+                    insert_data = ''.join(random.choices(string.ascii_letters + string.digits, k=10240))
+
+                    for item in items:
+                        kafka_payload = {
+                            "transaction_id": str(order.transaction_id),
+                            "product_id": str(item.product.id),
+                            "quantity": int(item.quantity),
+                            "price": float(item.product.price),
+                            "timestamp": int(time.time() * 1000),
+                            "customer_id": customer.id,
+                            "store_id": fake_store_id,
+                            "raw_padding_data": insert_data # Dữ liệu rác (chỉ dùng test)
+                        }
+
+                        producer.send('sales_transactions', value=kafka_payload)
+                        print(f" > Sent item: Product {item.product.id}")
+
+                    #producer.flush()
+                    producer.flush(timeout=3.0)
+#                    producer.send('sales_transactions', value=kafka_payload).add_errback(on_send_error)
+
+                    print("LOG: All Kafka messages sent successfully.")
+
+                #except KafkaError as k_err:
+                        # Lỗi do Kafka (Connection, Timeout...)
+                    #print(f"🔥 KAFKA ERROR: {k_err}")
+                        # Return 500 để K6 biết là thất bại
+                    #return JsonResponse({'error': 'Kafka System Error'}, status=500)
+                except Exception as k_error:
+                    print(f"WARNING: Kafka Error: {k_error}")
+                    return JsonResponse({'error': 'Kafka System Error'}, status=500)
+            
+            # --- Kết thúc logic thành công ---
+            print("Order processing completed successfully.")
+            return JsonResponse('Payment complete!', safe=False)
+
+        else:
+            print('User is not logged in.')
+            return JsonResponse('User is not logged in.', status=401, safe=False)
 
     except DatabaseError as e:
-        transaction.rollback()
+        # Django tự rollback transaction khi ra khỏi khối @transaction.atomic
         print('Database error occurred:', e)
         return JsonResponse({'error': 'Database error: ' + str(e)}, status=500, safe=False)
+        
     except Exception as e:
-        transaction.rollback()
         print('Error occurred:', e)
         return JsonResponse({'error': 'Error: ' + str(e)}, status=500, safe=False)
+
+
+
 '''
 #@transaction.atomic
 def processOrder(request):
@@ -434,7 +494,7 @@ def processOrder(request):
 # -> lấy tên người dùng và mật khẩu từ form -> xác thực -> kiểm tra trùng lặp người dùng -> tồn tại -> đăng nhập -> chuyển hướng người dùng đến trang chủ
 # -> không tồn tại -> thông báo lỗi
 
-
+@csrf_exempt
 def loginPage(request):
     if request.user.is_authenticated:
         return redirect('home')
@@ -459,7 +519,7 @@ def loginPage(request):
 # -> chưa đăng nhập -> tạo form đăng ký -> kiểm tra yêu cầu của người dùng -> kiểm tra form đăng ký
 # trả về trang HTML auth/register.html với form đăng ký
 
-
+@csrf_exempt
 def registerPage(request):
     if request.user.is_authenticated:
         return redirect('home')
